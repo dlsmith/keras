@@ -300,6 +300,42 @@ def test_multi_input_layer():
 
 
 @keras_test
+def test_nested_shared_layer_deserialization():
+    ####################################################
+    # test nested shared layer deserialization
+
+    SHARED_LAYER_NAME = 'test_layer'
+
+    inputs = Input(shape=(32,))
+    x = Dense(16, name=SHARED_LAYER_NAME)(inputs)
+    output1 = Dense(16)(x)
+    output2 = Dense(16)(x)
+
+    model1 = Model(inputs, output1)
+    model2 = Model(inputs, output2)
+    assert (
+        model1.get_layer(SHARED_LAYER_NAME) is
+        model2.get_layer(SHARED_LAYER_NAME)
+    )
+
+    a = Input(shape=(32,))
+    b = Input(shape=(32,))
+    combined_model = Model([a, b], [model1(a), model2(b)])
+    assert len(combined_model.output_layers) == 2
+    assert (
+        combined_model.output_layers[0].get_layer(SHARED_LAYER_NAME) is
+        combined_model.output_layers[1].get_layer(SHARED_LAYER_NAME)
+    )
+
+    model_from_config = Model.from_config(combined_model.get_config())
+    assert len(model_from_config.output_layers) == 2
+    assert (
+        model_from_config.output_layers[0].get_layer(SHARED_LAYER_NAME) is
+        model_from_config.output_layers[1].get_layer(SHARED_LAYER_NAME)
+    )
+
+
+@keras_test
 def test_recursion():
     ####################################################
     # test recursion
